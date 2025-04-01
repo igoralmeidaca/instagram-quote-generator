@@ -1,0 +1,48 @@
+services:
+  postgres:
+    image: postgres:alpine
+    container_name: postgres_db
+    restart: always
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  worker:
+    build: .
+    restart: always
+    container_name: temporal_worker
+    depends_on:
+      - postgres
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      OUTPUT_DIR: ${OUTPUT_DIR}
+      BG_IMAGE_PATH: ${BG_IMAGE_PATH}
+      QUOTE_FONT_PATH: ${QUOTE_FONT_PATH}
+      AUTHOR_FONT_PATH: ${AUTHOR_FONT_PATH}
+      TEMPORAL_HOST: ${TEMPORAL_HOST}
+    volumes:
+      - ./images:/images
+      - ./fonts:/fonts
+    networks:
+      - temporal-network
+
+  nginx:
+    image: nginx:latest
+    container_name: nginx_server
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./images:/usr/share/nginx/html/images
+    ports:
+      - "80:80"
+
+volumes:
+  postgres_data:
+
+networks:
+  temporal-network:
+    external: true
